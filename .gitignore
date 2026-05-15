@@ -22,3 +22,6 @@ Thumbs.db
 _recovered/
 SkyLink.exe_extracted/
 **/SkyLink.exe_extracted/
+
+# private local notes — never commit (see LOCAL_ONLY/)
+LOCAL_ONLY/

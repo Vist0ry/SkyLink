@@ -11,6 +11,12 @@ SkyLink — небольшой агент для Windows. Он читает жу
 
 ---
 
+## Скачать
+
+**[SkyLink.exe (релиз 1.0)](https://github.com/Vist0ry/SkyLink/releases/download/1.0/SkyLink.exe)** · [все релизы](https://github.com/Vist0ry/SkyLink/releases)
+
+---
+
 ## Как начать
 
 1. Войдите на [skybioml.space](https://skybioml.space) через Discord.
