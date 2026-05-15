@@ -29,14 +29,7 @@ def main():
         args.append(f"--add-data={assets}{SEP}assets")
     PyInstaller.__main__.run(args)
     exe = ROOT / "dist" / "SkyLink.exe"
-    ico = ROOT / "assets" / "icon.ico"
-    if exe.is_file() and ico.is_file():
-        try:
-            from PyInstaller.utils.win32 import icon as win_icon
-
-            win_icon.CopyIcons(str(exe), str(ico))
-        except Exception as exc:
-            print(f"Warning: could not re-apply icon to exe: {exc}")
+    # Do not run CopyIcons after build — it corrupts the embedded PKG and breaks onefile exe.
     print(f"\nDone: {exe}")
 
 
