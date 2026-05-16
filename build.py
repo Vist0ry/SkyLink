@@ -29,7 +29,6 @@ def main():
         args.append(f"--add-data={assets}{SEP}assets")
     PyInstaller.__main__.run(args)
     exe = ROOT / "dist" / "SkyLink.exe"
-    # Do not run CopyIcons after build — it corrupts the embedded PKG and breaks onefile exe.
     print(f"\nDone: {exe}")
 
 
