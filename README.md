@@ -6,7 +6,7 @@
 <summary><strong>Русский</strong></summary>
 
 **Версия 1.02** · **Vistory**  
-Агент эскадрильи для Elite Dangerous и портала [SkyBioML](https://skybioml.space)
+Агент эскадрильи SkyBioML для Elite Dangerous и портала [SkyBioML](https://skybioml.space)
 
 ---
 
@@ -49,7 +49,7 @@ SkyLink — небольшой агент для Windows. Он читает жу
 <summary><strong>English</strong></summary>
 
 **Version 1.02** · **Vistory**  
-Squadron agent for Elite Dangerous and the [SkyBioML](https://skybioml.space) portal
+SkyBioML squadron agent for Elite Dangerous and the [SkyBioML](https://skybioml.space) portal
 
 ---
 
