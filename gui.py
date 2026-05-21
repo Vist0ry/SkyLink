@@ -409,7 +409,7 @@ class SkyLinkGUI(ctk.CTk):
         self.title(f'{config.APP_NAME} {config.SOFTWARE_VERSION} — {config.SOFTWARE_AUTHOR}')
         self.center_window()
 
-        myappid = 'skybioml.skylink.agent.1.01'
+        myappid = 'skybioml.skylink.agent.1.02'
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
         self._apply_window_icons()
@@ -660,12 +660,17 @@ class SkyLinkGUI(ctk.CTk):
 
     def _download_update_worker(self):
         try:
-            url = self.updater.find_installer_url(self._update_info_clicked.get('assets') or [])
+            url, portable = self.updater.find_update_asset(
+                self._update_info_clicked.get('assets') or []
+            )
             if not url:
                 self.after(0, self._on_update_download_failed)
                 return
-            path = self.updater.download_installer(url)
-            self.after(0, lambda: self.updater.run_installer_and_exit(path))
+            path = self.updater.download_installer(url, portable=portable)
+            self.after(
+                0,
+                lambda p=path, pt=portable: self.updater.run_update_and_exit(p, pt),
+            )
         except Exception as e:
             logging.warning('Update download failed: %s', e)
             self.after(0, self._on_update_download_failed)

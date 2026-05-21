@@ -9,7 +9,9 @@ import httpx
 from packaging.version import parse as parse_version
 
 GITHUB_API_LATEST = "https://api.github.com/repos/{repo}/releases/latest"
-UPDATE_FILENAME = "SkyLink_Setup_Update.exe"
+SETUP_UPDATE_FILENAME = "SkyLink_Setup_Update.exe"
+PORTABLE_UPDATE_FILENAME = "SkyLink_update.exe"
+CREATE_NO_WINDOW = 0x08000000
 
 
 class UpdateManager:
@@ -49,7 +51,7 @@ class UpdateManager:
         body = data.get("body") or ""
         return {"version": tag_stripped, "body": body, "assets": data.get("assets") or []}
 
-    def find_installer_url(self, assets: list) -> Optional[str]:
+    def find_update_asset(self, assets: list) -> tuple[Optional[str], bool]:
         setup_url = None
         portable_url = None
         for asset in assets:
@@ -63,12 +65,20 @@ class UpdateManager:
                 setup_url = url
             elif name == "skylink.exe":
                 portable_url = url
-        return setup_url or portable_url
+        if setup_url:
+            return setup_url, False
+        if portable_url:
+            return portable_url, True
+        return None, False
 
     def download_installer(
-        self, url: str, progress_callback: Optional[Callable[[int, int], None]] = None
+        self,
+        url: str,
+        portable: bool = False,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> str:
-        path = os.path.join(tempfile.gettempdir(), UPDATE_FILENAME)
+        filename = PORTABLE_UPDATE_FILENAME if portable else SETUP_UPDATE_FILENAME
+        path = os.path.join(tempfile.gettempdir(), filename)
         headers = {"User-Agent": self.config.USER_AGENT}
         with httpx.Client(timeout=60.0, follow_redirects=True) as client:
             with client.stream("GET", url, headers=headers) as response:
@@ -84,6 +94,77 @@ class UpdateManager:
                                 progress_callback(written, total)
         return path
 
-    def run_installer_and_exit(self, installer_path: str) -> None:
+    def run_update_and_exit(self, installer_path: str, portable: bool) -> None:
+        if portable:
+            self.apply_portable_update_and_exit(installer_path)
+        else:
+            self.run_setup_installer_and_exit(installer_path)
+
+    def run_setup_installer_and_exit(self, installer_path: str) -> None:
         subprocess.Popen([installer_path])
+        sys.exit(0)
+
+    def apply_portable_update_and_exit(self, downloaded_path: str) -> None:
+        if not getattr(sys, "frozen", False):
+            subprocess.Popen([downloaded_path])
+            sys.exit(0)
+            return
+
+        target = os.path.abspath(sys.executable)
+        if not os.path.isfile(target):
+            logging.error("Update failed: cannot resolve running executable path.")
+            subprocess.Popen([downloaded_path])
+            sys.exit(0)
+            return
+
+        pid = os.getpid()
+        script_path = os.path.join(tempfile.gettempdir(), f"skylink_update_{pid}.ps1")
+        target_ps = target.replace("'", "''")
+        new_ps = os.path.abspath(downloaded_path).replace("'", "''")
+        script = f"""
+$Target = '{target_ps}'
+$New = '{new_ps}'
+$ProcId = {pid}
+while (Get-Process -Id $ProcId -ErrorAction SilentlyContinue) {{
+    Start-Sleep -Seconds 1
+}}
+$replaced = $false
+for ($i = 0; $i -lt 30; $i++) {{
+    try {{
+        Copy-Item -LiteralPath $New -Destination $Target -Force
+        $replaced = $true
+        break
+    }} catch {{
+        Start-Sleep -Seconds 1
+    }}
+}}
+if ($replaced) {{
+    Start-Process -FilePath $Target
+    Remove-Item -LiteralPath $New -Force -ErrorAction SilentlyContinue
+}} else {{
+    Start-Process -FilePath $New
+}}
+Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+"""
+        with open(script_path, "w", encoding="utf-8") as f:
+            f.write(script.strip())
+
+        try:
+            subprocess.Popen(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-WindowStyle",
+                    "Hidden",
+                    "-File",
+                    script_path,
+                ],
+                creationflags=CREATE_NO_WINDOW,
+                close_fds=True,
+            )
+        except Exception as e:
+            logging.error("Could not start update helper: %s", e)
+            subprocess.Popen([downloaded_path])
         sys.exit(0)
