@@ -5,7 +5,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "source.png"
 OUT_SIZE = 512
-TRAY_SIZE = 64
+TRAY_SIZE = 128
 ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
 
 TRAY_VARIANTS = (

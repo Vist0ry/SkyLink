@@ -50,13 +50,20 @@ class UpdateManager:
         return {"version": tag_stripped, "body": body, "assets": data.get("assets") or []}
 
     def find_installer_url(self, assets: list) -> Optional[str]:
+        setup_url = None
+        portable_url = None
         for asset in assets:
             name = (asset.get("name") or "").lower()
-            if "setup" in name and name.endswith(".exe"):
-                url = asset.get("browser_download_url")
-                if url:
-                    return url
-        return None
+            if not name.endswith(".exe"):
+                continue
+            url = asset.get("browser_download_url")
+            if not url:
+                continue
+            if "setup" in name:
+                setup_url = url
+            elif name == "skylink.exe":
+                portable_url = url
+        return setup_url or portable_url
 
     def download_installer(
         self, url: str, progress_callback: Optional[Callable[[int, int], None]] = None

@@ -12,9 +12,8 @@ from tkinter import BooleanVar
 import customtkinter as ctk
 import pystray
 from PIL import Image, ImageDraw, ImageTk
-from tendo import singleton
-
 from config import CURRENT_SESSION, UI_STATE, Config
+from single_instance import acquire_single_instance, notify_already_running
 from main import start_background_service, stop_background_service
 from sender import FAILED_ACCOUNTS, Sender
 from updater import UpdateManager
@@ -34,6 +33,11 @@ ctk.set_appearance_mode('Dark')
 
 RUN_KEY = 'Software\\Microsoft\\Windows\\CurrentVersion\\Run'
 REG_VALUE_NAME = 'SkyLinkAgent'
+APP_ICON_ICO = os.path.join('assets', 'icon.ico')
+APP_ICON_PNG = os.path.join('assets', 'icon.png')
+WINDOW_ICON_SIZES = (16, 24, 32, 48, 64, 128, 256)
+TRAY_ICON_SIZE = 128
+HEADER_LOGO_SIZE = 28
 
 
 def lerp_color(color1, color2, t):
@@ -43,7 +47,28 @@ def lerp_color(color1, color2, t):
     return f'#{r:02x}{g:02x}{b:02x}'
 
 
-def apply_taskbar_fix(window_id):
+def set_windows_taskbar_icons(hwnd, icon_ico_path):
+    if not hwnd or not icon_ico_path or not os.path.isfile(icon_ico_path):
+        return
+    try:
+        user32 = ctypes.windll.user32
+        LR_LOADFROMFILE = 0x0010
+        LR_DEFAULTSIZE = 0x0040
+        IMAGE_ICON = 1
+        WM_SETICON = 0x0080
+        ICON_SMALL = 0
+        ICON_BIG = 1
+        hicon = user32.LoadImageW(
+            None, icon_ico_path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE
+        )
+        if hicon:
+            user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, hicon)
+            user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, hicon)
+    except Exception as e:
+        logging.warning('Taskbar icon error: %s', e)
+
+
+def apply_taskbar_fix(window_id, icon_ico_path=None):
     try:
         hwnd = ctypes.windll.user32.GetParent(window_id)
         if hwnd == 0:
@@ -57,6 +82,7 @@ def apply_taskbar_fix(window_id):
             style = style | WS_EX_APPWINDOW
             ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
             ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, 39)
+        set_windows_taskbar_icons(hwnd, icon_ico_path)
     except Exception as e:
         print(f'WinAPI Error: {e}')
 
@@ -369,6 +395,10 @@ class SkyLinkGUI(ctk.CTk):
         self.running = True
         self.tray_icon = None
         self.last_tray_color = None
+        self._icon_ico_path = resource_path(APP_ICON_ICO)
+        self._icon_png_path = resource_path(APP_ICON_PNG)
+        self._icon_refs = []
+        self._header_logo = None
         self.pulse_phase = 0.0
         self._current_view = None
         self._service_started = False
@@ -379,19 +409,10 @@ class SkyLinkGUI(ctk.CTk):
         self.title(f'{config.APP_NAME} {config.SOFTWARE_VERSION} — {config.SOFTWARE_AUTHOR}')
         self.center_window()
 
-        myappid = 'skybioml.skylink.agent.1.0'
+        myappid = 'skybioml.skylink.agent.1.01'
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
-        try:
-            icon_png = resource_path(os.path.join('assets', 'icon.png'))
-            logo = Image.open(icon_png).convert('RGBA')
-            self._icon_refs = []
-            for size in (16, 32, 48, 64):
-                photo = ImageTk.PhotoImage(logo.resize((size, size), Image.Resampling.LANCZOS))
-                self._icon_refs.append(photo)
-                self.iconphoto(True, self._icon_refs[-1])
-        except Exception as e:
-            logging.warning('Icon load error: %s', e)
+        self._apply_window_icons()
 
         self.bind('<Map>', self.on_window_map)
 
@@ -422,8 +443,28 @@ class SkyLinkGUI(ctk.CTk):
 
     def on_window_map(self, event):
         if event.widget == self:
-            apply_taskbar_fix(self.winfo_id())
+            apply_taskbar_fix(self.winfo_id(), self._icon_ico_path)
             self.unbind('<Map>')
+
+    def _apply_window_icons(self):
+        if os.path.isfile(self._icon_ico_path):
+            try:
+                self.iconbitmap(self._icon_ico_path)
+            except Exception as e:
+                logging.warning('iconbitmap error: %s', e)
+        if not os.path.isfile(self._icon_png_path):
+            logging.warning('App icon not found: %s', self._icon_png_path)
+            return
+        try:
+            logo = Image.open(self._icon_png_path).convert('RGBA')
+            for size in WINDOW_ICON_SIZES:
+                photo = ImageTk.PhotoImage(
+                    logo.resize((size, size), Image.Resampling.LANCZOS)
+                )
+                self._icon_refs.append(photo)
+                self.iconphoto(True, self._icon_refs[-1])
+        except Exception as e:
+            logging.warning('Icon load error: %s', e)
 
     def center_window(self):
         screen_width = self.winfo_screenwidth()
@@ -438,9 +479,28 @@ class SkyLinkGUI(ctk.CTk):
         self.header.bind('<Button-1>', self.start_move)
         self.header.bind('<B1-Motion>', self.do_move)
 
-        ctk.CTkLabel(self.header, text='⚡', text_color=COLOR_ACCENT, font=('PLAY', 16)).pack(
-            side='left', padx=(15, 5)
-        )
+        try:
+            if os.path.isfile(self._icon_png_path):
+                logo_small = Image.open(self._icon_png_path).convert('RGBA')
+                logo_small = logo_small.resize(
+                    (HEADER_LOGO_SIZE, HEADER_LOGO_SIZE), Image.Resampling.LANCZOS
+                )
+                self._header_logo = ctk.CTkImage(
+                    light_image=logo_small,
+                    dark_image=logo_small,
+                    size=(HEADER_LOGO_SIZE, HEADER_LOGO_SIZE),
+                )
+                logo_lbl = ctk.CTkLabel(
+                    self.header, text='', image=self._header_logo, width=HEADER_LOGO_SIZE, height=HEADER_LOGO_SIZE
+                )
+                logo_lbl.pack(side='left', padx=(12, 6))
+                logo_lbl.bind('<Button-1>', self.start_move)
+                logo_lbl.bind('<B1-Motion>', self.do_move)
+        except Exception as e:
+            logging.warning('Header logo error: %s', e)
+            ctk.CTkLabel(self.header, text='⚡', text_color=COLOR_ACCENT, font=('PLAY', 16)).pack(
+                side='left', padx=(15, 5)
+            )
         ctk.CTkLabel(
             self.header, text='SKYLINK AGENT', font=('PLAY', 12, 'bold'), text_color='white'
         ).pack(side='left')
@@ -867,10 +927,13 @@ class SkyLinkGUI(ctk.CTk):
         path = resource_path(os.path.join('assets', fname))
         try:
             if os.path.isfile(path):
-                return Image.open(path).convert('RGBA')
+                img = Image.open(path).convert('RGBA')
+                if img.size != (TRAY_ICON_SIZE, TRAY_ICON_SIZE):
+                    img = img.resize((TRAY_ICON_SIZE, TRAY_ICON_SIZE), Image.Resampling.LANCZOS)
+                return img
         except OSError:
             pass
-        width, height = (64, 64)
+        width, height = (TRAY_ICON_SIZE, TRAY_ICON_SIZE)
         image = Image.new('RGB', (width, height), (30, 30, 30))
         dc = ImageDraw.Draw(image)
         fill_map = {
@@ -879,7 +942,11 @@ class SkyLinkGUI(ctk.CTk):
             'yellow': (255, 193, 7),
             'gray': (100, 100, 100),
         }
-        dc.ellipse((16, 16, 48, 48), fill=fill_map.get(color, (100, 100, 100)))
+        margin = TRAY_ICON_SIZE // 4
+        dc.ellipse(
+            (margin, margin, TRAY_ICON_SIZE - margin, TRAY_ICON_SIZE - margin),
+            fill=fill_map.get(color, (100, 100, 100)),
+        )
         return image
 
     def minimize_to_tray(self):
@@ -889,7 +956,7 @@ class SkyLinkGUI(ctk.CTk):
         self.deiconify()
         self.lift()
         self.focus_force()
-        apply_taskbar_fix(self.winfo_id())
+        apply_taskbar_fix(self.winfo_id(), self._icon_ico_path)
 
     def quit_app(self, icon=None, item=None):
         self.running = False
@@ -1005,10 +1072,9 @@ class SkyLinkGUI(ctk.CTk):
 
 
 if __name__ == '__main__':
-    try:
-        singleton.SingleInstance()
-    except singleton.SingleInstanceException:
-        sys.exit()
+    if not acquire_single_instance():
+        notify_already_running()
+        sys.exit(0)
     config = Config()
     app = SkyLinkGUI(config)
     app.protocol('WM_DELETE_WINDOW', app.minimize_to_tray)

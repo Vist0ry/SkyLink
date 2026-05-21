@@ -1,6 +1,6 @@
 # SkyLink
 
-**Версия 1.0** · **Vistory**  
+**Версия 1.01** · **Vistory**  
 Связь Elite Dangerous с порталом [SkyBioML](https://skybioml.space)
 
 ---
@@ -13,7 +13,7 @@ SkyLink — небольшой агент для Windows. Он читает жу
 
 ## Скачать
 
-**[SkyLink.exe (релиз 1.0)](https://github.com/Vist0ry/SkyLink/releases/download/1.0/SkyLink.exe)** · [все релизы](https://github.com/Vist0ry/SkyLink/releases)
+**[SkyLink.exe (релиз 1.01)](https://github.com/Vist0ry/SkyLink/releases/download/1.01/SkyLink.exe)** · [все релизы](https://github.com/Vist0ry/SkyLink/releases)
 
 ---
 
