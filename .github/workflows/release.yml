@@ -42,9 +42,11 @@ jobs:
         shell: pwsh
         run: |
           $orgFromVar = '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
-          if ([string]::IsNullOrWhiteSpace($orgFromVar)) {
-            Write-Host '::warning::SIGNPATH_ORGANIZATION_ID variable is empty.'
-            Write-Host 'If you added Organization ID as a Secret, the updated workflow will use it in the Sign job.'
+          $orgFromSecret = '${{ secrets.SIGNPATH_ORGANIZATION_ID }}'
+          if ([string]::IsNullOrWhiteSpace($orgFromVar) -and [string]::IsNullOrWhiteSpace($orgFromSecret)) {
+            Write-Host '::warning::SIGNPATH_ORGANIZATION_ID is missing in both Variables and Secrets.'
+          } elseif ([string]::IsNullOrWhiteSpace($orgFromVar)) {
+            Write-Host 'SIGNPATH_ORGANIZATION_ID variable is empty; using repository secret if set.'
           } else {
             Write-Host 'SIGNPATH_ORGANIZATION_ID variable is set.'
           }
@@ -83,10 +85,17 @@ jobs:
         id: signpath
         shell: bash
         run: |
-          if [ -n "${{ vars.SIGNPATH_ORGANIZATION_ID }}" ]; then
-            echo "org_id=${{ vars.SIGNPATH_ORGANIZATION_ID }}" >> "$GITHUB_OUTPUT"
+          ORG_VAR='${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+          ORG_SECRET='${{ secrets.SIGNPATH_ORGANIZATION_ID }}'
+          if [ -n "$ORG_VAR" ]; then
+            echo "org_id=$ORG_VAR" >> "$GITHUB_OUTPUT"
+            echo "Organization ID source: repository variable"
+          elif [ -n "$ORG_SECRET" ]; then
+            echo "org_id=$ORG_SECRET" >> "$GITHUB_OUTPUT"
+            echo "Organization ID source: repository secret"
           else
-            echo "org_id=${{ secrets.SIGNPATH_ORGANIZATION_ID }}" >> "$GITHUB_OUTPUT"
+            echo "::error::SIGNPATH_ORGANIZATION_ID is missing. Add it as a Repository secret or variable in GitHub Settings → Actions."
+            exit 1
           fi
 
       - name: Submit signing request
