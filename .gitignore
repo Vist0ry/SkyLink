@@ -25,3 +25,6 @@ SkyLink.exe_extracted/
 
 # private local notes — never commit (see LOCAL_ONLY/)
 LOCAL_ONLY/
+
+# maintainer-only setup guide (SignPath secrets / variables)
+docs/SIGNPATH_SETUP.md

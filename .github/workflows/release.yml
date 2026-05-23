@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]*'
+      - 'v[0-9]*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build SkyLink.exe
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Prepare .env for CI build
+        run: Copy-Item .env.example .env
+
+      - name: Build executable
+        run: python build.py
+
+      - name: Upload unsigned artifact
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: skylink-unsigned
+          path: dist/SkyLink.exe
+          if-no-files-found: error
+
+  sign:
+    name: Sign with SignPath
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+    steps:
+      - name: Download unsigned artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: skylink-unsigned
+          path: dist
+
+      - name: Upload artifact for SignPath
+        id: upload-for-signpath
+        uses: actions/upload-artifact@v4
+        with:
+          name: skylink-signpath-input
+          path: dist/SkyLink.exe
+          if-no-files-found: error
+
+      - name: Resolve release version
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Submit signing request
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+          project-slug: '${{ vars.SIGNPATH_PROJECT_SLUG }}'
+          signing-policy-slug: '${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}'
+          github-artifact-id: '${{ steps.upload-for-signpath.outputs.artifact-id }}'
+          wait-for-completion: true
+          output-artifact-directory: signed
+          parameters: |
+            version: ${{ steps.version.outputs.value }}
+
+      - name: Upload signed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skylink-signed
+          path: signed/SkyLink.exe
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: [build, sign]
+    runs-on: ubuntu-latest
+    if: >-
+      always() &&
+      needs.build.result == 'success' &&
+      (needs.sign.result == 'success' || needs.sign.result == 'skipped')
+    steps:
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.sign.result == 'success' && 'skylink-signed' || 'skylink-unsigned' }}
+          path: release
+
+      - name: Resolve release version
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SkyLink ${{ steps.version.outputs.value }}
+          tag_name: ${{ github.ref_name }}
+          files: release/SkyLink.exe
+          generate_release_notes: true
