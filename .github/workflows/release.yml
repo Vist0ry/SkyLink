@@ -63,7 +63,6 @@ jobs:
     name: Sign with SignPath
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' || secrets.SIGNPATH_ORGANIZATION_ID != '' }}
     steps:
       - name: Download unsigned artifact
         uses: actions/download-artifact@v4
@@ -104,7 +103,7 @@ jobs:
     if: >-
       always() &&
       needs.build.result == 'success' &&
-      (needs.sign.result == 'success' || needs.sign.result == 'skipped')
+      (needs.sign.result == 'success' || needs.sign.result == 'failure' || needs.sign.result == 'skipped')
     steps:
       - name: Download release artifact
         uses: actions/download-artifact@v4
