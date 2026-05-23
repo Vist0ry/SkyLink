@@ -50,6 +50,7 @@ jobs:
           }
           Write-Host "PROJECT_SLUG=${{ vars.SIGNPATH_PROJECT_SLUG || 'SkyLink' }}"
           Write-Host "POLICY_SLUG=${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}"
+          Write-Host "ARTIFACT_CONFIG_SLUG=${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG || 'default' }}"
 
       - name: Upload unsigned artifact
         id: upload-unsigned
@@ -95,6 +96,7 @@ jobs:
           organization-id: '${{ steps.signpath.outputs.org_id }}'
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'SkyLink' }}
           signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG || 'default' }}
           github-artifact-id: '${{ steps.upload-for-signpath.outputs.artifact-id }}'
           wait-for-completion: true
           output-artifact-directory: signed
