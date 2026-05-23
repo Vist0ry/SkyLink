@@ -38,6 +38,17 @@ jobs:
       - name: Build executable
         run: python build.py
 
+      - name: Check SignPath variables
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace('${{ vars.SIGNPATH_ORGANIZATION_ID }}')) {
+            Write-Host '::warning::SIGNPATH_ORGANIZATION_ID is empty — Sign job will be skipped.'
+          } else {
+            Write-Host 'SIGNPATH_ORGANIZATION_ID is set.'
+          }
+          Write-Host "PROJECT_SLUG=${{ vars.SIGNPATH_PROJECT_SLUG || 'SkyLink' }}"
+          Write-Host "POLICY_SLUG=${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}"
+
       - name: Upload unsigned artifact
         id: upload-unsigned
         uses: actions/upload-artifact@v4
@@ -50,7 +61,7 @@ jobs:
     name: Sign with SignPath
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+    if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_ORGANIZATION_ID != null }}
     steps:
       - name: Download unsigned artifact
         uses: actions/download-artifact@v4
