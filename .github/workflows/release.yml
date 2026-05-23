@@ -5,6 +5,7 @@ on:
     tags:
       - '[0-9]*'
       - 'v[0-9]*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -27,7 +28,9 @@ jobs:
           cache-dependency-path: requirements.txt
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Prepare .env for CI build
         run: Copy-Item .env.example .env
@@ -63,22 +66,16 @@ jobs:
           path: dist/SkyLink.exe
           if-no-files-found: error
 
-      - name: Resolve release version
-        id: version
-        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
       - name: Submit signing request
         uses: signpath/github-action-submit-signing-request@v2
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
           organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
-          project-slug: '${{ vars.SIGNPATH_PROJECT_SLUG }}'
-          signing-policy-slug: '${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}'
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'SkyLink' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
           github-artifact-id: '${{ steps.upload-for-signpath.outputs.artifact-id }}'
           wait-for-completion: true
           output-artifact-directory: signed
-          parameters: |
-            version: ${{ steps.version.outputs.value }}
 
       - name: Upload signed artifact
         uses: actions/upload-artifact@v4
