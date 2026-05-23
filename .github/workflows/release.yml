@@ -78,11 +78,21 @@ jobs:
           path: dist/SkyLink.exe
           if-no-files-found: error
 
+      - name: Resolve SignPath organization id
+        id: signpath
+        shell: bash
+        run: |
+          if [ -n "${{ vars.SIGNPATH_ORGANIZATION_ID }}" ]; then
+            echo "org_id=${{ vars.SIGNPATH_ORGANIZATION_ID }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "org_id=${{ secrets.SIGNPATH_ORGANIZATION_ID }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Submit signing request
         uses: signpath/github-action-submit-signing-request@v2
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
-          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_ORGANIZATION_ID || secrets.SIGNPATH_ORGANIZATION_ID }}'
+          organization-id: '${{ steps.signpath.outputs.org_id }}'
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'SkyLink' }}
           signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
           github-artifact-id: '${{ steps.upload-for-signpath.outputs.artifact-id }}'
