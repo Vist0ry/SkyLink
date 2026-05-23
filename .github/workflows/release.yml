@@ -41,10 +41,12 @@ jobs:
       - name: Check SignPath variables
         shell: pwsh
         run: |
-          if ([string]::IsNullOrWhiteSpace('${{ vars.SIGNPATH_ORGANIZATION_ID }}')) {
-            Write-Host '::warning::SIGNPATH_ORGANIZATION_ID is empty — Sign job will be skipped.'
+          $orgFromVar = '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+          if ([string]::IsNullOrWhiteSpace($orgFromVar)) {
+            Write-Host '::warning::SIGNPATH_ORGANIZATION_ID variable is empty.'
+            Write-Host 'If you added Organization ID as a Secret, the updated workflow will use it in the Sign job.'
           } else {
-            Write-Host 'SIGNPATH_ORGANIZATION_ID is set.'
+            Write-Host 'SIGNPATH_ORGANIZATION_ID variable is set.'
           }
           Write-Host "PROJECT_SLUG=${{ vars.SIGNPATH_PROJECT_SLUG || 'SkyLink' }}"
           Write-Host "POLICY_SLUG=${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}"
@@ -61,7 +63,7 @@ jobs:
     name: Sign with SignPath
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_ORGANIZATION_ID != null }}
+    if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' || secrets.SIGNPATH_ORGANIZATION_ID != '' }}
     steps:
       - name: Download unsigned artifact
         uses: actions/download-artifact@v4
@@ -81,7 +83,7 @@ jobs:
         uses: signpath/github-action-submit-signing-request@v2
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
-          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_ORGANIZATION_ID || secrets.SIGNPATH_ORGANIZATION_ID }}'
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'SkyLink' }}
           signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
           github-artifact-id: '${{ steps.upload-for-signpath.outputs.artifact-id }}'
