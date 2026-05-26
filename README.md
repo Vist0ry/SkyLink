@@ -48,7 +48,7 @@ SkyLink — небольшой агент для Windows. Он читает жу
 | Elite Dangerous | да | нет |
 | Аккаунт на [skybioml.space](https://skybioml.space) | да | да |
 | API-ключ SkyLink | да | да |
-| Право доступа к мессенджеру на портале | — | да |
+| Право доступа к мессенджеру на портале | нет | да |
 
 Ключ API хранится только на вашем компьютере (`%APPDATA%\SkyLink`).
 
@@ -113,7 +113,7 @@ The **Messages** button in the window and tray opens a **dedicated window** with
 | Elite Dangerous | yes | no |
 | Account at [skybioml.space](https://skybioml.space) | yes | yes |
 | SkyLink API key | yes | yes |
-| Messenger access on the portal | — | yes |
+| Messenger access on the portal | no | yes |
 
 Your API key is stored only on your PC (`%APPDATA%\SkyLink`).
 
