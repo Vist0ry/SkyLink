@@ -5,7 +5,7 @@
 <details open>
 <summary><strong>Русский</strong></summary>
 
-**Версия 2.0** · **Vistory**  
+**Версия 2.0.1** · **Vistory**  
 Агент эскадрильи для Elite Dangerous и портала [SkyBioML](https://skybioml.space)
 
 ---
@@ -18,7 +18,7 @@ SkyLink — небольшой агент для Windows. Он читает жу
 
 ## Скачать
 
-**[SkyLink.exe (релиз 2.0)](https://github.com/Vist0ry/SkyLink/releases/download/2.0/SkyLink.exe)** · [все релизы](https://github.com/Vist0ry/SkyLink/releases)
+**[SkyLink.exe (релиз 2.0.1)](https://github.com/Vist0ry/SkyLink/releases/download/2.0.1/SkyLink.exe)** · [все релизы](https://github.com/Vist0ry/SkyLink/releases)
 
 ---
 
@@ -48,7 +48,7 @@ SkyLink — небольшой агент для Windows. Он читает жу
 <details>
 <summary><strong>English</strong></summary>
 
-**Version 2.0** · **Vistory**  
+**Version 2.0.1** · **Vistory**  
 Squadron agent for Elite Dangerous and the [SkyBioML](https://skybioml.space) portal
 
 ---
@@ -61,7 +61,7 @@ It runs in the system tray: minimize the window, play as usual — your wing HQ 
 
 ## Download
 
-**[SkyLink.exe (release 2.0)](https://github.com/Vist0ry/SkyLink/releases/download/2.0/SkyLink.exe)** · [all releases](https://github.com/Vist0ry/SkyLink/releases)
+**[SkyLink.exe (release 2.0.1)](https://github.com/Vist0ry/SkyLink/releases/download/2.0.1/SkyLink.exe)** · [all releases](https://github.com/Vist0ry/SkyLink/releases)
 
 ---
 

@@ -2,7 +2,7 @@
 <summary><strong>Русский</strong></summary>
 
 ### Что нового
-- **Мессенджер эскадрильи** — кнопка **Messages** в окне и в трее открывает чат 
+- **Мессенджер** — исправлено открытие окна Messages (отдельный webview, понятные ошибки)
 
 </details>
 
@@ -10,6 +10,6 @@
 <summary><strong>English</strong></summary>
 
 ### What's new
-- **Squadron messenger** — **Messages** in the main window and system tray opens the chat 
+- **Messenger** — fixed Messages window launch (dedicated webview, clearer errors)
 
 </details>
