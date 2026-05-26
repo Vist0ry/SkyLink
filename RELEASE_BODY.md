@@ -2,7 +2,7 @@
 <summary><strong>Русский</strong></summary>
 
 ### Что нового
-- **Messages** — чат только в браузере (исправлена ошибка «pywebview must be run on a main thread»)
+- **Messages** — отдельное окно SkyLink (не браузер); исправлен запуск pywebview в своём процессе
 
 </details>
 
@@ -10,6 +10,6 @@
 <summary><strong>English</strong></summary>
 
 ### What's new
-- **Messages** — chat opens in the browser only (fixes «pywebview must be run on a main thread»)
+- **Messages** — dedicated SkyLink window (not the browser); pywebview runs in its own process
 
 </details>

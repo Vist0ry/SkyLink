@@ -26,6 +26,7 @@ def main():
         "--hidden-import=httpx",
         "--hidden-import=webview",
         "--collect-submodules=webview",
+        f"--add-data={ROOT / 'messages_webview_proc.py'}{SEP}.",
     ]
     assets = ROOT / "assets"
     if assets.is_dir():

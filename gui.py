@@ -410,7 +410,7 @@ class SkyLinkGUI(ctk.CTk):
         self.title(f'{config.APP_NAME} {config.SOFTWARE_VERSION} — {config.SOFTWARE_AUTHOR}')
         self.center_window()
 
-        myappid = 'skybioml.skylink.agent.2.0.3'
+        myappid = 'skybioml.skylink.agent.2.0.4'
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
         self._apply_window_icons()
@@ -1096,6 +1096,12 @@ class SkyLinkGUI(ctk.CTk):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) >= 3 and sys.argv[1] == '--skylink-messages':
+        from messages_webview_proc import run_messages_webview
+
+        run_messages_webview(sys.argv[2])
+        sys.exit(0)
+
     if not acquire_single_instance():
         notify_already_running()
         sys.exit(0)

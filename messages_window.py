@@ -1,13 +1,18 @@
-"""SkyLink messages — opens portal chat in the default browser (no pywebview thread)."""
+"""SkyLink messages — embedded window (separate process) or browser fallback."""
 
 from __future__ import annotations
 
 import base64
 import logging
+import subprocess
+import sys
 import threading
 import webbrowser
+from pathlib import Path
 
 import httpx
+
+_messages_subprocess: subprocess.Popen | None = None
 
 
 def _portal_base(config) -> str:
@@ -19,7 +24,6 @@ def _portal_base(config) -> str:
 
 
 def _resolve_account(config) -> tuple[str | None, str | None]:
-    """Saved API key is enough — journal / game session not required."""
     from config import CURRENT_SESSION
 
     session_cmdr = CURRENT_SESSION.get("commander")
@@ -27,8 +31,7 @@ def _resolve_account(config) -> tuple[str | None, str | None]:
     if session_cmdr and session_key:
         return session_cmdr, session_key
 
-    accounts = getattr(config, "accounts", None) or {}
-    for name, key in accounts.items():
+    for name, key in (getattr(config, "accounts", None) or {}).items():
         key_s = (key or "").strip()
         if key_s:
             return str(name), key_s
@@ -68,7 +71,7 @@ def fetch_chat_embed_url(config) -> str:
     embed_url = data.get("embedUrl")
     if not embed_url:
         raise RuntimeError("Portal did not return embedUrl")
-    logging.info("Messages token OK for %s, opening browser", cmdr)
+    logging.info("Messages token OK for %s", cmdr)
     return embed_url
 
 
@@ -98,9 +101,50 @@ def _show_info(title: str, message: str) -> None:
         logging.info("%s: %s", title, message)
 
 
-def _open_chat(embed_url: str) -> None:
+def _messages_launch_command(embed_url: str) -> list[str]:
+    """Command line for a child process with its own main thread (pywebview)."""
+    if getattr(sys, "frozen", False):
+        return [sys.executable, "--skylink-messages", embed_url]
+    script = Path(__file__).resolve().parent / "messages_webview_proc.py"
+    return [sys.executable, str(script), embed_url]
+
+
+def _open_embedded_window(embed_url: str) -> bool:
+    """Separate OS process — pywebview runs on that process main thread."""
+    global _messages_subprocess
+
+    if _messages_subprocess is not None and _messages_subprocess.poll() is None:
+        logging.info("Messages window already open")
+        return True
+
+    try:
+        cmd = _messages_launch_command(embed_url)
+        creationflags = 0
+        if sys.platform == "win32":
+            creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+        _messages_subprocess = subprocess.Popen(
+            cmd,
+            creationflags=creationflags,
+        )
+        logging.info("Messages embedded window started: %s", cmd[0])
+        return True
+    except Exception as e:
+        logging.error("Messages embedded window failed: %s", e)
+        _messages_subprocess = None
+        return False
+
+
+def _open_chat(embed_url: str, prefer_embedded: bool = True) -> None:
+    if prefer_embedded and _open_embedded_window(embed_url):
+        return
     webbrowser.open(embed_url)
-    logging.info("Messages opened in browser")
+    logging.info("Messages opened in browser (fallback)")
+    _show_info(
+        "SkyLink — Messages",
+        "Could not open the SkyLink chat window.\n"
+        "Chat was opened in your browser instead.",
+    )
 
 
 def open_messages_window(config, gui_app=None) -> None:
@@ -109,13 +153,7 @@ def open_messages_window(config, gui_app=None) -> None:
             embed_url = fetch_chat_embed_url(config)
 
             def on_main():
-                _open_chat(embed_url)
-                _show_info(
-                    "SkyLink — Messages",
-                    "Chat opened in your browser.\n\n"
-                    "Elite Dangerous is not required.\n"
-                    "WAITING FOR SIGNAL only affects telemetry.",
-                )
+                _open_chat(embed_url, prefer_embedded=True)
 
             if gui_app is not None and hasattr(gui_app, "after"):
                 try:
