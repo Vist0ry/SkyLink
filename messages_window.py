@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import logging
 import threading
-import time
+import webbrowser
 
 import httpx
 
@@ -14,9 +14,9 @@ try:
 except ImportError:
     webview = None  # type: ignore
 
-_loop_started = False
-_loop_lock = threading.Lock()
 _messages_window = None
+_webview_thread: threading.Thread | None = None
+_webview_lock = threading.Lock()
 
 
 def _portal_base(config) -> str:
@@ -57,6 +57,10 @@ def fetch_chat_embed_url(config) -> str:
     base = _portal_base(config)
     url = f"{base}/api/auth/skylink-chat-token"
     response = httpx.post(url, headers=_auth_headers(config, cmdr, api_key), timeout=20)
+    if response.status_code == 403:
+        raise RuntimeError(
+            "Messages access denied on the portal. Enable MESSENGER permission for your rank."
+        )
     response.raise_for_status()
     data = response.json()
     embed_url = data.get("embedUrl")
@@ -65,51 +69,76 @@ def fetch_chat_embed_url(config) -> str:
     return embed_url
 
 
-def _ensure_webview_loop() -> None:
-    global _loop_started
-    if webview is None:
-        raise RuntimeError("pywebview is not installed")
-    with _loop_lock:
-        if _loop_started:
+def _show_error(title: str, message: str) -> None:
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror(title, message, parent=root)
+        root.destroy()
+    except Exception:
+        logging.error("%s: %s", title, message)
+
+
+def _webview_main(initial_url: str) -> None:
+    global _messages_window
+    try:
+        _messages_window = webview.create_window(
+            "SkyLink — Messages",
+            initial_url,
+            width=980,
+            height=720,
+            resizable=True,
+            min_size=(640, 480),
+        )
+        webview.start()
+    except Exception as e:
+        logging.error("Messages webview loop ended: %s", e)
+    finally:
+        _messages_window = None
+
+
+def _ensure_webview_thread(initial_url: str) -> None:
+    global _webview_thread
+    with _webview_lock:
+        if _webview_thread is not None and _webview_thread.is_alive() and _messages_window is not None:
+            try:
+                _messages_window.load_url(initial_url)
+                _messages_window.show()
+                return
+            except Exception as e:
+                logging.warning("Messages reload failed, reopening window: %s", e)
+
+        if _webview_thread is not None and _webview_thread.is_alive():
+            logging.warning("Messages window busy; opening in browser")
+            webbrowser.open(initial_url)
             return
-        threading.Thread(target=lambda: webview.start(debug=False), daemon=True).start()
-        _loop_started = True
-        time.sleep(0.8)
+
+        _webview_thread = threading.Thread(
+            target=_webview_main,
+            args=(initial_url,),
+            name="SkyLinkMessagesWebView",
+            daemon=True,
+        )
+        _webview_thread.start()
 
 
 def open_messages_window(config) -> None:
-    global _messages_window
+    if webview is None:
+        _show_error(
+            "Messages",
+            "pywebview is not installed. Reinstall SkyLink 2.0 or open Messages from the portal in a browser.",
+        )
+        return
 
     def _open():
-        global _messages_window
         try:
             embed_url = fetch_chat_embed_url(config)
-            _ensure_webview_loop()
-
-            if _messages_window is not None:
-                try:
-                    _messages_window.load_url(embed_url)
-                    _messages_window.show()
-                    return
-                except Exception:
-                    _messages_window = None
-
-            if webview.windows:
-                win = webview.windows[0]
-                win.load_url(embed_url)
-                win.show()
-                _messages_window = win
-                return
-
-            _messages_window = webview.create_window(
-                "SkyLink — Messages",
-                embed_url,
-                width=980,
-                height=720,
-                resizable=True,
-                min_size=(640, 480),
-            )
+            _ensure_webview_thread(embed_url)
         except Exception as e:
             logging.error("Messages window error: %s", e)
+            _show_error("SkyLink — Messages", str(e))
 
     threading.Thread(target=_open, daemon=True).start()

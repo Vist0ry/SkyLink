@@ -23,6 +23,9 @@ def main():
         "--hidden-import=pystray",
         "--hidden-import=PIL",
         "--hidden-import=PIL._tkinter_finder",
+        "--hidden-import=httpx",
+        "--hidden-import=webview",
+        "--collect-submodules=webview",
     ]
     assets = ROOT / "assets"
     if assets.is_dir():
