@@ -2,7 +2,7 @@
 <summary><strong>Русский</strong></summary>
 
 ### Что нового
-- **Мессенджер** — исправлено открытие окна Messages (отдельный webview, понятные ошибки)
+- **Messages** — чат открывается в браузере (игра не нужна); исправлен выбор аккаунта при «WAITING FOR SIGNAL»
 
 </details>
 
@@ -10,6 +10,6 @@
 <summary><strong>English</strong></summary>
 
 ### What's new
-- **Messenger** — fixed Messages window launch (dedicated webview, clearer errors)
+- **Messages** — chat opens in the browser (game not required); account pick fixed when status is WAITING FOR SIGNAL
 
 </details>

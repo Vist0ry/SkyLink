@@ -410,7 +410,7 @@ class SkyLinkGUI(ctk.CTk):
         self.title(f'{config.APP_NAME} {config.SOFTWARE_VERSION} — {config.SOFTWARE_AUTHOR}')
         self.center_window()
 
-        myappid = 'skybioml.skylink.agent.2.0.1'
+        myappid = 'skybioml.skylink.agent.2.0.2'
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
         self._apply_window_icons()
@@ -980,7 +980,7 @@ class SkyLinkGUI(ctk.CTk):
         apply_taskbar_fix(self.winfo_id(), self._icon_ico_path)
 
     def open_messages(self, icon=None, item=None):
-        open_messages_window(self.config)
+        open_messages_window(self.config, gui_app=self)
 
     def quit_app(self, icon=None, item=None):
         self.running = False
