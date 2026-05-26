@@ -1,4 +1,4 @@
-"""SkyLink messages — portal chat (browser; optional embedded webview on main thread)."""
+"""SkyLink messages — opens portal chat in the default browser (no pywebview thread)."""
 
 from __future__ import annotations
 
@@ -8,14 +8,6 @@ import threading
 import webbrowser
 
 import httpx
-
-try:
-    import webview
-except ImportError:
-    webview = None  # type: ignore
-
-_messages_window = None
-_webview_started = False
 
 
 def _portal_base(config) -> str:
@@ -27,7 +19,7 @@ def _portal_base(config) -> str:
 
 
 def _resolve_account(config) -> tuple[str | None, str | None]:
-    """Saved API key is enough — Elite Dangerous / journal not required."""
+    """Saved API key is enough — journal / game session not required."""
     from config import CURRENT_SESSION
 
     session_cmdr = CURRENT_SESSION.get("commander")
@@ -58,7 +50,7 @@ def fetch_chat_embed_url(config) -> str:
     if not cmdr or not api_key:
         raise RuntimeError(
             "Add an account with API key first (+ ADD ACCOUNT).\n"
-            "You do not need to run Elite Dangerous for Messages."
+            "Elite Dangerous does not need to be running."
         )
 
     base = _portal_base(config)
@@ -70,13 +62,13 @@ def fetch_chat_embed_url(config) -> str:
             "Admin → Roles → MESSENGER: enable access for your rank."
         )
     if response.status_code == 401:
-        raise RuntimeError("Invalid API key or commander name. Update key via CHANGE API.")
+        raise RuntimeError("Invalid API key or commander. Use CHANGE API and save again.")
     response.raise_for_status()
     data = response.json()
     embed_url = data.get("embedUrl")
     if not embed_url:
         raise RuntimeError("Portal did not return embedUrl")
-    logging.info("Messages embed for %s", cmdr)
+    logging.info("Messages token OK for %s, opening browser", cmdr)
     return embed_url
 
 
@@ -106,88 +98,45 @@ def _show_info(title: str, message: str) -> None:
         logging.info("%s: %s", title, message)
 
 
-def _open_in_browser(embed_url: str) -> None:
+def _open_chat(embed_url: str) -> None:
     webbrowser.open(embed_url)
+    logging.info("Messages opened in browser")
 
 
-def _try_embedded_webview(embed_url: str, gui_app) -> bool:
-    """Optional second window; may fail on some Windows setups."""
-    global _messages_window, _webview_started
-    if webview is None:
-        return False
-
-    def run():
-        global _messages_window, _webview_started
-        try:
-            if _messages_window is not None:
-                try:
-                    _messages_window.load_url(embed_url)
-                    _messages_window.show()
-                    return
-                except Exception:
-                    _messages_window = None
-
-            _messages_window = webview.create_window(
-                "SkyLink — Messages",
-                embed_url,
-                width=980,
-                height=720,
-                resizable=True,
-                min_size=(640, 480),
-            )
-            _webview_started = True
-            webview.start()
-        except Exception as e:
-            logging.error("Embedded Messages webview failed: %s", e)
-        finally:
-            _messages_window = None
-            _webview_started = False
-
-    if _webview_started:
-        return False
-
-    try:
-        threading.Thread(target=run, daemon=True, name="SkyLinkMessagesWebView").start()
-        return True
-    except Exception:
-        return False
-
-
-def _deliver_url(config, embed_url: str, gui_app, use_embedded: bool) -> None:
-    _open_in_browser(embed_url)
-    _show_info(
-        "SkyLink — Messages",
-        "Chat opened in your browser.\n\n"
-        "Elite Dangerous does not need to be running.\n"
-        "WAITING FOR SIGNAL only affects telemetry.",
-    )
-    if use_embedded:
-        _try_embedded_webview(embed_url, gui_app)
-
-
-def open_messages_window(config, gui_app=None, prefer_embedded: bool = False) -> None:
+def open_messages_window(config, gui_app=None) -> None:
     def worker():
         try:
             embed_url = fetch_chat_embed_url(config)
+
+            def on_main():
+                _open_chat(embed_url)
+                _show_info(
+                    "SkyLink — Messages",
+                    "Chat opened in your browser.\n\n"
+                    "Elite Dangerous is not required.\n"
+                    "WAITING FOR SIGNAL only affects telemetry.",
+                )
+
             if gui_app is not None and hasattr(gui_app, "after"):
                 try:
                     if gui_app.winfo_exists():
-                        gui_app.after(
-                            0,
-                            lambda: _deliver_url(config, embed_url, gui_app, prefer_embedded),
-                        )
+                        gui_app.after(0, on_main)
                         return
                 except Exception:
                     pass
-            _deliver_url(config, embed_url, gui_app, prefer_embedded)
+            on_main()
         except Exception as e:
-            logging.error("Messages window error: %s", e)
+            logging.error("Messages error: %s", e)
+
+            def on_err():
+                _show_error("SkyLink — Messages", str(e))
+
             if gui_app is not None and hasattr(gui_app, "after"):
                 try:
-                    gui_app.after(0, lambda: _show_error("SkyLink — Messages", str(e)))
+                    gui_app.after(0, on_err)
                     return
                 except Exception:
                     pass
-            _show_error("SkyLink — Messages", str(e))
+            on_err()
 
     threading.Thread(target=worker, daemon=True, name="SkyLinkMessagesFetch").start()

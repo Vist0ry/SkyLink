@@ -2,7 +2,7 @@
 <summary><strong>Русский</strong></summary>
 
 ### Что нового
-- **Messages** — чат открывается в браузере (игра не нужна); исправлен выбор аккаунта при «WAITING FOR SIGNAL»
+- **Messages** — чат только в браузере (исправлена ошибка «pywebview must be run on a main thread»)
 
 </details>
 
@@ -10,6 +10,6 @@
 <summary><strong>English</strong></summary>
 
 ### What's new
-- **Messages** — chat opens in the browser (game not required); account pick fixed when status is WAITING FOR SIGNAL
+- **Messages** — chat opens in the browser only (fixes «pywebview must be run on a main thread»)
 
 </details>
