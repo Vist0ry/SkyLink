@@ -409,7 +409,7 @@ class SkyLinkGUI(ctk.CTk):
         self.title(f'{config.APP_NAME} {config.SOFTWARE_VERSION} — {config.SOFTWARE_AUTHOR}')
         self.center_window()
 
-        myappid = 'skybioml.skylink.agent.1.1'
+        myappid = 'skybioml.skylink.agent.1.02'
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
         self._apply_window_icons()

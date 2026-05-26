@@ -11,14 +11,12 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build SkyLink.exe
+  release:
+    name: Build and publish SkyLink.exe
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,102 +36,9 @@ jobs:
       - name: Build executable
         run: python build.py
 
-      - name: Check SignPath variables
-        shell: pwsh
-        run: |
-          $orgFromVar = '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
-          $orgFromSecret = '${{ secrets.SIGNPATH_ORGANIZATION_ID }}'
-          if ([string]::IsNullOrWhiteSpace($orgFromVar) -and [string]::IsNullOrWhiteSpace($orgFromSecret)) {
-            Write-Host '::warning::SIGNPATH_ORGANIZATION_ID is missing in both Variables and Secrets.'
-          } elseif ([string]::IsNullOrWhiteSpace($orgFromVar)) {
-            Write-Host 'SIGNPATH_ORGANIZATION_ID variable is empty; using repository secret if set.'
-          } else {
-            Write-Host 'SIGNPATH_ORGANIZATION_ID variable is set.'
-          }
-          Write-Host "PROJECT_SLUG=${{ vars.SIGNPATH_PROJECT_SLUG || 'SkyLink' }}"
-          Write-Host "POLICY_SLUG=${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}"
-          Write-Host "ARTIFACT_CONFIG_SLUG=${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG || 'initial' }}"
-
-      - name: Upload unsigned artifact
-        id: upload-unsigned
-        uses: actions/upload-artifact@v4
-        with:
-          name: skylink-unsigned
-          path: dist/SkyLink.exe
-          if-no-files-found: error
-
-  sign:
-    name: Sign with SignPath
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download unsigned artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: skylink-unsigned
-          path: dist
-
-      - name: Upload artifact for SignPath
-        id: upload-for-signpath
-        uses: actions/upload-artifact@v4
-        with:
-          name: skylink-signpath-input
-          path: dist/SkyLink.exe
-          if-no-files-found: error
-
-      - name: Resolve SignPath organization id
-        id: signpath
-        shell: bash
-        run: |
-          ORG_VAR='${{ vars.SIGNPATH_ORGANIZATION_ID }}'
-          ORG_SECRET='${{ secrets.SIGNPATH_ORGANIZATION_ID }}'
-          if [ -n "$ORG_VAR" ]; then
-            echo "org_id=$ORG_VAR" >> "$GITHUB_OUTPUT"
-            echo "Organization ID source: repository variable"
-          elif [ -n "$ORG_SECRET" ]; then
-            echo "org_id=$ORG_SECRET" >> "$GITHUB_OUTPUT"
-            echo "Organization ID source: repository secret"
-          else
-            echo "::error::SIGNPATH_ORGANIZATION_ID is missing. Add it as a Repository secret or variable in GitHub Settings → Actions."
-            exit 1
-          fi
-
-      - name: Submit signing request
-        uses: signpath/github-action-submit-signing-request@v2
-        with:
-          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
-          organization-id: '${{ steps.signpath.outputs.org_id }}'
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'SkyLink' }}
-          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
-          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG || 'initial' }}
-          github-artifact-id: '${{ steps.upload-for-signpath.outputs.artifact-id }}'
-          wait-for-completion: true
-          output-artifact-directory: signed
-
-      - name: Upload signed artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: skylink-signed
-          path: signed/SkyLink.exe
-          if-no-files-found: error
-
-  release:
-    name: Publish GitHub Release
-    needs: [build, sign]
-    runs-on: ubuntu-latest
-    if: >-
-      always() &&
-      needs.build.result == 'success' &&
-      (needs.sign.result == 'success' || needs.sign.result == 'failure' || needs.sign.result == 'skipped')
-    steps:
-      - name: Download release artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.sign.result == 'success' && 'skylink-signed' || 'skylink-unsigned' }}
-          path: release
-
       - name: Resolve release version
         id: version
+        shell: bash
         run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
@@ -141,5 +46,5 @@ jobs:
         with:
           name: SkyLink ${{ steps.version.outputs.value }}
           tag_name: ${{ github.ref_name }}
-          files: release/SkyLink.exe
+          files: dist/SkyLink.exe
           generate_release_notes: true
