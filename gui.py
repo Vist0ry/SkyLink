@@ -18,6 +18,7 @@ from main import start_background_service, stop_background_service
 from sender import FAILED_ACCOUNTS, Sender
 from updater import UpdateManager
 from utils import verify_api_key
+from messages_window import open_messages_window
 
 COLOR_BG = '#0a0a0f'
 COLOR_BORDER = '#2a2a2f'
@@ -409,7 +410,7 @@ class SkyLinkGUI(ctk.CTk):
         self.title(f'{config.APP_NAME} {config.SOFTWARE_VERSION} — {config.SOFTWARE_AUTHOR}')
         self.center_window()
 
-        myappid = 'skybioml.skylink.agent.1.02'
+        myappid = 'skybioml.skylink.agent.2.0'
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
         self._apply_window_icons()
@@ -528,6 +529,20 @@ class SkyLinkGUI(ctk.CTk):
             command=lambda: webbrowser.open(self.config.PORTAL_BASE),
         )
         self.btn_portal.pack(side='right', padx=10)
+
+        self.btn_messages = ctk.CTkButton(
+            self.header,
+            text='Messages',
+            width=100,
+            height=28,
+            fg_color='#1a1030',
+            hover_color='#2a1850',
+            border_width=1,
+            border_color='#4a3080',
+            text_color='#ddd6fe',
+            command=self.open_messages,
+        )
+        self.btn_messages.pack(side='right', padx=(0, 4))
 
     def create_footer(self):
         self.footer = ctk.CTkFrame(self.inner_frame, fg_color='transparent', height=40)
@@ -911,6 +926,7 @@ class SkyLinkGUI(ctk.CTk):
     def setup_tray(self):
         menu = pystray.Menu(
             pystray.MenuItem('Open SkyLink', self.show_window, default=True),
+            pystray.MenuItem('Messages', self.open_messages),
             pystray.MenuItem('Exit', self.quit_app),
         )
         self.tray_icon = pystray.Icon(
@@ -962,6 +978,9 @@ class SkyLinkGUI(ctk.CTk):
         self.lift()
         self.focus_force()
         apply_taskbar_fix(self.winfo_id(), self._icon_ico_path)
+
+    def open_messages(self, icon=None, item=None):
+        open_messages_window(self.config)
 
     def quit_app(self, icon=None, item=None):
         self.running = False

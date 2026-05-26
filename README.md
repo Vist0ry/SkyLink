@@ -5,20 +5,20 @@
 <details open>
 <summary><strong>Русский</strong></summary>
 
-**Версия 1.02** · **Vistory**  
+**Версия 2.0** · **Vistory**  
 Агент эскадрильи для Elite Dangerous и портала [SkyBioML](https://skybioml.space)
 
 ---
 
 SkyLink — небольшой агент для Windows. Он читает журнал игры и передаёт данные на портал **вашей эскадрильи**: положение, события, статус связи. На сайте работают синхронизация командира, Road 2 Riches и другие инструменты HQ.
 
-Программа живёт в трее: свернули окно — играете как обычно, штаб эскадрильи остаётся в курсе.
+Программа живёт в трее: свернули окно — играете как обычно, штаб эскадрильи остаётся в курсе. Кнопка **Messages** открывает мессенджер портала (нужны права на сайте и API-ключ SkyLink).
 
 ---
 
 ## Скачать
 
-**[SkyLink.exe (релиз 1.02)](https://github.com/Vist0ry/SkyLink/releases/download/1.02/SkyLink.exe)** · [все релизы](https://github.com/Vist0ry/SkyLink/releases)
+**[SkyLink.exe (релиз 2.0)](https://github.com/Vist0ry/SkyLink/releases/download/2.0/SkyLink.exe)** · [все релизы](https://github.com/Vist0ry/SkyLink/releases)
 
 ---
 
@@ -48,20 +48,20 @@ SkyLink — небольшой агент для Windows. Он читает жу
 <details>
 <summary><strong>English</strong></summary>
 
-**Version 1.02** · **Vistory**  
+**Version 2.0** · **Vistory**  
 Squadron agent for Elite Dangerous and the [SkyBioML](https://skybioml.space) portal
 
 ---
 
 SkyLink is a small Windows agent. It reads your game journal and sends data to **your squadron** portal: position, events, link status. That powers commander sync, Road 2 Riches, and other HQ tools on the site.
 
-It runs in the system tray: minimize the window, play as usual — your wing HQ stays updated.
+It runs in the system tray: minimize the window, play as usual — your wing HQ stays updated. **Messages** opens the portal messenger (requires site permission and a SkyLink API key).
 
 ---
 
 ## Download
 
-**[SkyLink.exe (release 1.02)](https://github.com/Vist0ry/SkyLink/releases/download/1.02/SkyLink.exe)** · [all releases](https://github.com/Vist0ry/SkyLink/releases)
+**[SkyLink.exe (release 2.0)](https://github.com/Vist0ry/SkyLink/releases/download/2.0/SkyLink.exe)** · [all releases](https://github.com/Vist0ry/SkyLink/releases)
 
 ---
 

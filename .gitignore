@@ -13,6 +13,8 @@ discovery.json
 deduplication_cache.json
 *.log
 *.exe
+*.pem
+*.cer
 
 .DS_Store
 Thumbs.db

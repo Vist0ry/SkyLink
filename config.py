@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 APP_NAME = "SkyLink"
-SOFTWARE_VERSION = "1.02"
+SOFTWARE_VERSION = "2.0"
 SOFTWARE_AUTHOR = "Vistory"
 GITHUB_REPO = "Vist0ry/SkyLink"
 
